@@ -28,6 +28,8 @@ OPT=-O2
 # comment out this line to enable assertions at runtime
 DEFS += -DNDEBUG
 
+# OPT = -g3
+# DEFS += -DDEBUG
 #########################################################################
 # nothing below this line should need to be changed (usually)
 #########################################################################
