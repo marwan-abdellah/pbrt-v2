@@ -23,13 +23,15 @@ DEFS=-DPBRT_HAS_OPENEXR
 # 64 bit
 MARCH=-m64
 
+# Release
 # change this to -g3 for debug builds
-OPT=-O2
+# OPT=-O2
 # comment out this line to enable assertions at runtime
-DEFS += -DNDEBUG
+# DEFS += -DNDEBUG
 
-# OPT = -g3
-# DEFS += -DDEBUG
+# Debug
+OPT = -g3
+DEFS += -DDEBUG
 #########################################################################
 # nothing below this line should need to be changed (usually)
 #########################################################################
