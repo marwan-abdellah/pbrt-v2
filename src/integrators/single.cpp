@@ -66,6 +66,8 @@ Spectrum SingleScatteringIntegrator::Transmittance(const Scene *scene,
 Spectrum SingleScatteringIntegrator::Li(const Scene *scene, const Renderer *renderer,
         const RayDifferential &ray, const Sample *sample, RNG &rng,
         Spectrum *T, MemoryArena &arena) const {
+
+    // This is our volume region to be integrated in the scene...
     VolumeRegion *vr = scene->volumeRegion;
     float t0, t1;
     if (!vr || !vr->IntersectP(ray, &t0, &t1) || (t1-t0) == 0.f) {
@@ -111,22 +113,45 @@ Spectrum SingleScatteringIntegrator::Li(const Scene *scene, const Renderer *rend
         }
 
         // Compute single-scattering source term at _p_
+        // This is basically due to the emissio as calculated before
         Lv += Tr * vr->Lve(p, w, ray.time);
+
+        // Get the scattering coeffecient sigma_s
+        // Defined in the scene descriptor
         Spectrum ss = vr->sigma_s(p, w, ray.time);
+
+        // Checking if the scattering coeff is != 0 (BLACK BODY)
+        // Neither the there are no lights in the scene
         if (!ss.IsBlack() && scene->lights.size() > 0) {
+
+            // Number of lights in the scene
             int nLights = scene->lights.size();
+
+            // ???
             int ln = min(Floor2Int(lightNum[sampOffset] * nLights),
                          nLights-1);
+
+            // Getting light in the scene
             Light *light = scene->lights[ln];
+
             // Add contribution of _light_ due to scattering at _p_
             float pdf;
+
+            // Checking the obstructions between the light and the point
             VisibilityTester vis;
             Vector wo;
+
+            // light sample
             LightSample ls(lightComp[sampOffset], lightPos[2*sampOffset],
                            lightPos[2*sampOffset+1]);
+
+            // ???
             Spectrum L = light->Sample_L(p, 0.f, ls, ray.time, &wo, &pdf, &vis);
             
+            // Light has an effet "check"
             if (!L.IsBlack() && pdf > 0.f && vis.Unoccluded(scene)) {
+
+                // Radiance due to the light
                 Spectrum Ld = L * vis.Transmittance(scene, renderer, NULL, rng, arena);
                 Lv += Tr * ss * vr->p(p, w, -wo, ray.time) * Ld * float(nLights) /
                         pdf;

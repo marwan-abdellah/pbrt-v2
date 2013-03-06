@@ -60,6 +60,7 @@
 #include "integrators/dipolesubsurface.h"
 #include "integrators/directlighting.h"
 #include "integrators/emission.h"
+#include "integrators/weighted_emission.h"
 #include "integrators/glossyprt.h"
 #include "integrators/igi.h"
 #include "integrators/irradiancecache.h"
@@ -518,13 +519,25 @@ VolumeRegion *MakeVolumeRegion(const string &name,
         const Transform &volume2world, const ParamSet &paramSet) {
     VolumeRegion *vr = NULL;
     if (name == "homogeneous")
+    {
+        printf("Homogenous Volume ... \n");
         vr = CreateHomogeneousVolumeDensityRegion(volume2world, paramSet);
+    }
     else if (name == "volumegrid")
+    {
+        printf("Volume Grid \n");
         vr = CreateGridVolumeRegion(volume2world, paramSet);
+    }
     else if (name == "exponential")
+    {
+        printf("Exponential Volume \n");
         vr = CreateExponentialVolumeRegion(volume2world, paramSet);
+    }
     else
+    {
+        printf("No volume has been created \n");
         Warning("Volume region \"%s\" unknown.", name.c_str());
+    }
     paramSet.ReportUnused();
     return vr;
 }
@@ -569,7 +582,10 @@ VolumeIntegrator *MakeVolumeIntegrator(const string &name,
     if (name == "single")
         vi = CreateSingleScatteringIntegrator(paramSet);
     else if (name == "emission")
+
         vi = CreateEmissionVolumeIntegrator(paramSet);
+    else if (name == "weighted_emission")
+        vi = CreateWeightedEmissionVolumeIntegrator(paramSet);
     else
         Warning("Volume integrator \"%s\" unknown.", name.c_str());
     paramSet.ReportUnused();

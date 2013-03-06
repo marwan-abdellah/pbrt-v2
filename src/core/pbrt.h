@@ -149,8 +149,16 @@ class GeometricPrimitive;
 template <int nSamples> class CoefficientSpectrum;
 class RGBSpectrum;
 class SampledSpectrum;
-typedef RGBSpectrum Spectrum;
-// typedef SampledSpectrum Spectrum;
+
+/*
+ * Use the SampledSpectrum implementation to incorporate the wavelengths
+ * into the game.
+ *
+ */
+// typedef RGBSpectrum Spectrum;
+typedef SampledSpectrum Spectrum;
+
+
 class Camera;
 class ProjectiveCamera;
 class Sampler;

@@ -33,45 +33,33 @@
 #pragma once
 #endif
 
-#ifndef PBRT_VOLUMES_VOLUMEGRID_H
-#define PBRT_VOLUMES_VOLUMEGRID_H
+#ifndef PBRT_INTEGRATORS_WEIGHTED_EMISSION_H
+#define PBRT_INTEGRATORS_WEIGHTED_EMISSION_H
 
-// volumes/volumegrid.h*
+// integrators/emission.h*
 #include "volume.h"
+#include "integrator.h"
+#include "scene.h"
 
-// VolumeGridDensity Declarations
-class VolumeGridDensity : public DensityRegion {
+// EmissionIntegrator Declarations
+class WeightedEmissionIntegrator : public VolumeIntegrator {
 public:
-    // VolumeGridDensity Public Methods
-    VolumeGridDensity(const Spectrum &sa, const Spectrum &ss, float gg,
-            const Spectrum &emit, const BBox &e, const Transform &v2w,
-            int x, int y, int z, const float *d)
-        : DensityRegion(sa, ss, gg, emit, v2w), nx(x), ny(y), nz(z), extent(e) {
-        density = new float[nx*ny*nz];
-        memcpy(density, d, nx*ny*nz*sizeof(float));
-    }
-    ~VolumeGridDensity() { delete[] density; }
-    BBox WorldBound() const { return Inverse(WorldToVolume)(extent); }
-    bool IntersectP(const Ray &r, float *t0, float *t1) const {
-        Ray ray = WorldToVolume(r);
-        return extent.IntersectP(ray, t0, t1);
-    }
-    float Density(const Point &Pobj) const;
-    float D(int x, int y, int z) const {
-        x = Clamp(x, 0, nx-1);
-        y = Clamp(y, 0, ny-1);
-        z = Clamp(z, 0, nz-1);
-        return density[z*nx*ny + y*nx + x]; // * this->volumeEmission->y();
-    }
+    // EmissionIntegrator Public Methods
+    WeightedEmissionIntegrator(float ss) { stepSize = ss; }
+    void RequestSamples(Sampler *sampler, Sample *sample, const Scene *scene);
+    Spectrum Li(const Scene *scene, const Renderer *renderer,
+            const RayDifferential &ray, const Sample *sample, RNG &rng,
+            Spectrum *transmittance, MemoryArena &arena) const;
+    Spectrum Transmittance(const Scene *scene, const Renderer *,
+            const RayDifferential &ray, const Sample *sample, RNG &rng,
+            MemoryArena &arena) const;
 private:
-    // VolumeGridDensity Private Data
-    float *density;
-    const int nx, ny, nz;
-    const BBox extent;
+    // EmissionIntegrator Private Data
+    float stepSize;
+    int tauSampleOffset, scatterSampleOffset;
 };
 
 
-VolumeGridDensity *CreateGridVolumeRegion(const Transform &volume2world,
-        const ParamSet &params);
+WeightedEmissionIntegrator *CreateWeightedEmissionVolumeIntegrator(const ParamSet &params);
 
-#endif // PBRT_VOLUMES_VOLUMEGRID_H
+#endif // PBRT_INTEGRATORS_WEIGHTED_EMISSION_H

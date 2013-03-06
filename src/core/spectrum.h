@@ -95,6 +95,7 @@ extern const float RGBIllum2SpectBlue[nRGB2SpectSamples];
 template <int nSamples> class CoefficientSpectrum {
 public:
     // CoefficientSpectrum Public Methods
+    // Init. all the wavelengthes by a constant calue across the spectrum.
     CoefficientSpectrum(float v = 0.f) {
         for (int i = 0; i < nSamples; ++i)
             c[i] = v;
@@ -449,6 +450,32 @@ public:
         xyz[2] /= yint;
         return FromXYZ(xyz);
     }
+
+    float getR() {
+        return this->c[0];
+    }
+
+    float getG() {
+        return this->c[1];
+    }
+
+    float getB() {
+        return this->c[2];
+    }
+
+    void setR(float R) {
+        this->c[0] = R;
+    }
+
+    void setG(float G) {
+        this->c[1] = G;
+    }
+
+    void setB(float B) {
+        this->c[2] = B;
+    }
+
+
 };
 
 
