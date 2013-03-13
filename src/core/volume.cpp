@@ -122,8 +122,9 @@ static float RdToAlphap(float reflectance, float A) {
 }
 
 
-
+////////////////////////////////////////////////////////////////////////////
 // Volume Scattering Definitions
+// Several phase functions
 float PhaseIsotropic(const Vector &, const Vector &) {
     return 1.f / (4.f * M_PI);
 }
@@ -163,6 +164,7 @@ float PhaseSchlick(const Vector &w, const Vector &wp, float g) {
     return 1.f / (4.f * M_PI) *
         (1.f - k*k) / ((1.f - kcostheta) * (1.f - kcostheta));
 }
+////////////////////////////////////////////////////////////////////////////
 
 
 VolumeRegion::~VolumeRegion() {

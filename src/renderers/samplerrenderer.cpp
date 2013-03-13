@@ -73,9 +73,20 @@ void SamplerRendererTask::Run() {
     RNG rng(taskNum);
 
     // Allocate space for samples and intersections
+
+    // MaximumSampleCount will return the maximum number of samples
+    // that can retrun at once
     int maxSamples = sampler->MaximumSampleCount();
+
+    // get the samples "4-samples"
     Sample *samples = origSample->Duplicate(maxSamples);
+
+    // create 4 ray or number of rays that is equivalent to the
+    // number of sampels
     RayDifferential *rays = new RayDifferential[maxSamples];
+
+    // also create correspinding spectra for the transmittance
+    // and radiance and intersections
     Spectrum *Ls = new Spectrum[maxSamples];
     Spectrum *Ts = new Spectrum[maxSamples];
     Intersection *isects = new Intersection[maxSamples];
@@ -87,7 +98,11 @@ void SamplerRendererTask::Run() {
         for (int i = 0; i < sampleCount; ++i) {
             // Find camera ray for _sample[i]_
             PBRT_STARTED_GENERATING_CAMERA_RAY(&samples[i]);
+
+            // for scaling the rays
             float rayWeight = camera->GenerateRayDifferential(samples[i], &rays[i]);
+
+            // rays scale
             rays[i].ScaleDifferentials(1.f / sqrtf(sampler->samplesPerPixel));
             PBRT_FINISHED_GENERATING_CAMERA_RAY(&samples[i], &rays[i], rayWeight);
 
@@ -136,6 +151,7 @@ void SamplerRendererTask::Run() {
         }
 
         // Report sample results to _Sampler_, add contributions to image
+        // Finalization to construct the image
         if (sampler->ReportResults(samples, rays, Ls, isects, sampleCount))
         {
             for (int i = 0; i < sampleCount; ++i)

@@ -44,26 +44,38 @@
 static const int sampledLambdaStart = 400;
 static const int sampledLambdaEnd = 700;
 static const int nSpectralSamples = 30;
+
+// Checking if the spectrum is sorted or not
 extern bool SpectrumSamplesSorted(const float *lambda, const float *vals, int n);
+
+// Sort the spectrum
 extern void SortSpectrumSamples(float *lambda, float *vals, int n);
+
+// Calculate the average spectrum
 extern float AverageSpectrumSamples(const float *lambda, const float *vals,
     int n, float lambdaStart, float lambdaEnd);
+
+// Conversion from the XYZ to RGB
 inline void XYZToRGB(const float xyz[3], float rgb[3]) {
     rgb[0] =  3.240479f*xyz[0] - 1.537150f*xyz[1] - 0.498535f*xyz[2];
     rgb[1] = -0.969256f*xyz[0] + 1.875991f*xyz[1] + 0.041556f*xyz[2];
     rgb[2] =  0.055648f*xyz[0] - 0.204043f*xyz[1] + 1.057311f*xyz[2];
 }
 
-
+// Conversion from the RGB to XYZ
 inline void RGBToXYZ(const float rgb[3], float xyz[3]) {
     xyz[0] = 0.412453f*rgb[0] + 0.357580f*rgb[1] + 0.180423f*rgb[2];
     xyz[1] = 0.212671f*rgb[0] + 0.715160f*rgb[1] + 0.072169f*rgb[2];
     xyz[2] = 0.019334f*rgb[0] + 0.119193f*rgb[1] + 0.950227f*rgb[2];
 }
 
-
+// Illumination spectrum or Reflectance Spectrum
 enum SpectrumType { SPECTRUM_REFLECTANCE, SPECTRUM_ILLUMINANT };
+
+// ???
 extern void Blackbody(const float *wl, int n, float temp, float *vals);
+
+// Interpolate spectrum samples
 extern float InterpolateSpectrumSamples(const float *lambda, const float *vals,
                                         int n, float l);
 
@@ -251,6 +263,15 @@ public:
             if (fscanf(f, "%f ", &c[i]) != 1) return false;
         return true;
     }
+
+    float* getC(void){
+        float* cSamples = (float*) malloc(nSamples * sizeof(float));
+        for (int i = 0; i < nSamples; i++)
+            cSamples[i] = c[i];
+
+        return cSamples;
+    }
+
 protected:
     // CoefficientSpectrum Protected Data
     float c[nSamples];
@@ -260,13 +281,24 @@ protected:
 class SampledSpectrum : public CoefficientSpectrum<nSpectralSamples> {
 public:
     // SampledSpectrum Public Methods
+    // Constructor with Zero-value spectrum at all wavelengths
     SampledSpectrum(float v = 0.f) {
         for (int i = 0; i < nSpectralSamples; ++i) c[i] = v;
     }
+
+
     SampledSpectrum(const CoefficientSpectrum<nSpectralSamples> &v)
         : CoefficientSpectrum<nSpectralSamples>(v) { }
+
+    // This function takes an already calculated SPD from a file
+    // computes the average sample value at each interval defined
+    // by the piece-wise linear functions.
+    // v: value
+    // lambda : wavelength
+    // n : number of samples in the file
     static SampledSpectrum FromSampled(const float *lambda,
                                        const float *v, int n) {
+
         // Sort samples if unordered, use sorted for returned spectrum
         if (!SpectrumSamplesSorted(lambda, v, n)) {
             vector<float> slambda(&lambda[0], &lambda[n]);
@@ -274,17 +306,28 @@ public:
             SortSpectrumSamples(&slambda[0], &sv[0], n);
             return FromSampled(&slambda[0], &sv[0], n);
         }
+
+        // The final spectrum
         SampledSpectrum r;
+        // For every sample in the final spectrum
         for (int i = 0; i < nSpectralSamples; ++i) {
             // Compute average value of given SPD over $i$th sample's range
+            // Gets the first value over the piece-wise linear function
             float lambda0 = Lerp(float(i) / float(nSpectralSamples),
                                  sampledLambdaStart, sampledLambdaEnd);
+
+            // Gets the second value over the piece-wise linear function
             float lambda1 = Lerp(float(i+1) / float(nSpectralSamples),
                                  sampledLambdaStart, sampledLambdaEnd);
+
+            // This gets the average of each sample value
             r.c[i] = AverageSpectrumSamples(lambda, v, n, lambda0, lambda1);
         }
+
+        // The final read spectrum calculated correctly
         return r;
     }
+
     static void Init() {
         // Compute XYZ matching functions for _SampledSpectrum_
         for (int i = 0; i < nSpectralSamples; ++i) {
@@ -320,7 +363,6 @@ public:
                 nRGB2SpectSamples, wl0, wl1);
             rgbRefl2SpectBlue.c[i] = AverageSpectrumSamples(RGB2SpectLambda, RGBRefl2SpectBlue,
                 nRGB2SpectSamples, wl0, wl1);
-        
             rgbIllum2SpectWhite.c[i] = AverageSpectrumSamples(RGB2SpectLambda, RGBIllum2SpectWhite,
                 nRGB2SpectSamples, wl0, wl1);
             rgbIllum2SpectCyan.c[i] = AverageSpectrumSamples(RGB2SpectLambda, RGBIllum2SpectCyan,
@@ -369,9 +411,12 @@ public:
             SpectrumType type = SPECTRUM_REFLECTANCE) {
         float rgb[3];
         XYZToRGB(xyz, rgb);
+
         return FromRGB(rgb, type);
     }
     SampledSpectrum(const RGBSpectrum &r, SpectrumType type = SPECTRUM_REFLECTANCE);
+
+
 private:
     // SampledSpectrum Private Data
     static SampledSpectrum X, Y, Z;

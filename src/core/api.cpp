@@ -67,6 +67,7 @@
 #include "integrators/path.h"
 #include "integrators/photonmap.h"
 #include "integrators/single.h"
+#include "integrators/abdellah.h"
 #include "integrators/useprobes.h"
 #include "integrators/whitted.h"
 #include "lights/diffuse.h"
@@ -581,8 +582,9 @@ VolumeIntegrator *MakeVolumeIntegrator(const string &name,
     VolumeIntegrator *vi = NULL;
     if (name == "single")
         vi = CreateSingleScatteringIntegrator(paramSet);
+    else if (name == "abdellah")
+        vi = CreateAbdellahIntegrator(paramSet);
     else if (name == "emission")
-
         vi = CreateEmissionVolumeIntegrator(paramSet);
     else if (name == "weighted_emission")
         vi = CreateWeightedEmissionVolumeIntegrator(paramSet);

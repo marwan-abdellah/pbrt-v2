@@ -38,6 +38,8 @@
 #include "iostream"
 #include <typeinfo>
 
+static int PRINT;
+
 // WeightedEmissionIntegrator Method Definitions
 void WeightedEmissionIntegrator::RequestSamples(Sampler *sampler, Sample *sample,
                                         const Scene *scene) {
@@ -69,7 +71,7 @@ Spectrum WeightedEmissionIntegrator::Li(const Scene *scene,
         const Sample *sample, RNG &rng, Spectrum *T,
         MemoryArena &arena) const {
 
-    // VolumeRegion *vr = scene->volumeRegion;
+    PRINT = 0;
     VolumeGridDensity *vr = static_cast<VolumeGridDensity*>(scene->volumeRegion);
 
 #ifdef DISPLAY_BB
@@ -140,6 +142,15 @@ Spectrum WeightedEmissionIntegrator::Li(const Scene *scene,
     ShiftSpectrum.setB(Lv.getG());
     return ShiftSpectrum * step;
 #endif
+
+
+    // Printing the spectrum
+    // for (int iSample = 0; iSample < 30; ++iSample)
+    // {   if (Lv.getC()[iSample] != 0)
+    //        printf("The SPD[%d] = %f \n", iSample, Lv.getC()[iSample]);
+    // }
+
+
     return Lv * step;
 }
 
