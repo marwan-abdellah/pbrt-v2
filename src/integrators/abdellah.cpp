@@ -29,23 +29,24 @@
 
  */
 
-
-// integrators/single.cpp*
+// this is a testing integrator for the fluorescence effects
+// integrators/abdellah.cpp*
 #include "stdafx.h"
-#include "integrators/single.h"
+#include "integrators/abdellah.h"
 #include "scene.h"
 #include "paramset.h"
 #include "montecarlo.h"
 
-// SingleScatteringIntegrator Method Definitions
-void SingleScatteringIntegrator::RequestSamples(Sampler *sampler, Sample *sample,
+// Abdellah Method Definitions
+// Get the samples along the ray
+void Abdellah::RequestSamples(Sampler *sampler, Sample *sample,
         const Scene *scene) {
     tauSampleOffset = sample->Add1D(1);
     scatterSampleOffset = sample->Add1D(1);
 }
 
-
-Spectrum SingleScatteringIntegrator::Transmittance(const Scene *scene,
+//Calculate the transmittance
+Spectrum Abdellah::Transmittance(const Scene *scene,
         const Renderer *renderer, const RayDifferential &ray,
         const Sample *sample, RNG &rng, MemoryArena &arena) const {
     if (!scene->volumeRegion) return Spectrum(1.f);
@@ -63,67 +64,104 @@ Spectrum SingleScatteringIntegrator::Transmittance(const Scene *scene,
 }
 
 
-Spectrum SingleScatteringIntegrator::Li(const Scene *scene, const Renderer *renderer,
-        const RayDifferential &ray, const Sample *sample, RNG &rng,
-        Spectrum *T, MemoryArena &arena) const {
+
+
+
+
+void Abdellah::Test(){
+
+
+    float lambdaInitial = 400;
+    float lambdaFinal = 700;
+    int lambdaSamples = 30;
+    float lambdaStep = (lambdaFinal - lambdaInitial) / (lambdaSamples);
+
+    int lambdaCtr;
+
+
+
+    for (lambdaCtr = 0; lambdaCtr < lambdaSamples; lambdaCtr++)
+    {
+
+        // Power value
+        float powerValue;
+
+
+
+
+    }
+
+
+}
+
+
+
+
+
+
+
+
+// RADIANCE CALCULATION
+Spectrum Abdellah::Li(const Scene *scene,
+                      const Renderer *renderer,
+                      const RayDifferential &ray,
+                      const Sample *sample, RNG &rng,
+                      Spectrum *T,
+                      MemoryArena &arena) const {
 
     // This is our volume region to be integrated in the scene...
     VolumeRegion *vr = scene->volumeRegion;
+
+
+    // Intersection points between the ray and the volume
     float t0, t1;
+
+    // if NO VOLUME
+    // if VOLUME DOESN'T INTERSECT THE RAY
+    // if NO INTERSECTION
     if (!vr || !vr->IntersectP(ray, &t0, &t1) || (t1-t0) == 0.f) {
         *T = 1.f;
         return 0.f;
     }
+
     // Do single scattering volume integration in _vr_
     Spectrum Lv(0.);
 
     // Prepare for volume integration stepping
-    // number of samples along the ray
     int nSamples = Ceil2Int((t1-t0) / stepSize);
-
-    // step size
     float step = (t1 - t0) / nSamples;
     Spectrum Tr(1.f);
     Point p = ray(t0), pPrev;
     Vector w = -ray.d;
-
-    // getting the beginning of the ray
     t0 += sample->oneD[scatterSampleOffset][0] * step;
 
-
     // Compute sample patterns for single scattering samples
-
-
-
-
-    // which light to sample
     float *lightNum = arena.Alloc<float>(nSamples);
     LDShuffleScrambled1D(1, nSamples, lightNum, rng);
-
-    // which component to sample
     float *lightComp = arena.Alloc<float>(nSamples);
     LDShuffleScrambled1D(1, nSamples, lightComp, rng);
-
-
-
-    // which point to take on the area light surface
     float *lightPos = arena.Alloc<float>(2*nSamples);
     LDShuffleScrambled2D(1, nSamples, lightPos, rng);
-
     uint32_t sampOffset = 0;
 
 
 
-
-
-
+    // Tracing ray
     for (int i = 0; i < nSamples; ++i, t0 += step) {
+
         // Advance to sample at _t0_ and update _T_
         pPrev = p;
+
         p = ray(t0);
+
+        // Calculate tau along the ray s
         Ray tauRay(pPrev, p - pPrev, 0.f, 1.f, ray.time, ray.depth);
+
+        // Calculate tau in the volume
         Spectrum stepTau = vr->tau(tauRay,
                                    .5f * stepSize, rng.RandomFloat());
+
+        // Calculate the trnasmittance
         Tr *= Exp(-stepTau);
 
         // Possibly terminate ray marching if transmittance is small
@@ -145,16 +183,13 @@ Spectrum SingleScatteringIntegrator::Li(const Scene *scene, const Renderer *rend
         Spectrum ss = vr->sigma_s(p, w, ray.time);
 
         // Checking if the scattering coeff is != 0 (BLACK BODY)
-        // Neither that there are no lights in the scene
+        // Neither the there are no lights in the scene
         if (!ss.IsBlack() && scene->lights.size() > 0) {
 
             // Number of lights in the scene
-            // for scaling the calculated sample from a single light
             int nLights = scene->lights.size();
 
-            // sample light
-            // only a single light is sampled at each point
-            // TODO
+            // ???
             int ln = min(Floor2Int(lightNum[sampOffset] * nLights),
                          nLights-1);
 
@@ -166,41 +201,112 @@ Spectrum SingleScatteringIntegrator::Li(const Scene *scene, const Renderer *rend
 
             // Checking the obstructions between the light and the point
             VisibilityTester vis;
-
-            // output direction at every point s
             Vector wo;
 
             // light sample
-            // TODO !!! TO BE FIXED
             LightSample ls(lightComp[sampOffset], lightPos[2*sampOffset],
                            lightPos[2*sampOffset+1]);
 
-            // Calculate the effect (radiance of the light sample at the point p in the directoin wo)
-            // also calculate the pdf choosen for sampling the direction
+            // Getting the contribution of the light
             Spectrum L = light->Sample_L(p, 0.f, ls, ray.time, &wo, &pdf, &vis);
             
             // Light has an effet "check"
             if (!L.IsBlack() && pdf > 0.f && vis.Unoccluded(scene)) {
 
-                // Radiance due to the light
-                // If there is no obstruction between the light sample and the point
-                // then do set the L to 1 otherwise, set it to 0
+                // Get the contribution due to the light source for the elsatic scattering
                 Spectrum Ld = L * vis.Transmittance(scene, renderer, NULL, rng, arena);
 
-                Lv += Tr * ss * vr->p(p, w, -wo, ray.time) * Ld * float(nLights) /
-                        pdf;
+                // Elastic Scattering
+                if(1)
+                {
+                    Lv += Tr * ss * vr->p(p, w, -wo, ray.time) * Ld * float(nLights) /
+                            pdf;
+                }
+
+
+
+                // Inelastic scattering
+                if (1)
+                {
+                    // Get the contribution from the in elastic scattering and use the
+                    // isotropic phase function
+
+                    // Radiance due to the light
+                    // In that part, I should account for the spectral shift with some spectral
+                    // shifting function and also multiply with the quantum yield
+                    float quantumYield = 0.79;
+                    Spectrum Lfluro(0.);
+
+                    Lfluro = quantumYield * Tr * ss * (1 / (4.f * M_PI)) * Ld * float(nLights) /
+                            pdf;
+
+                    // Do the spectral shift
+                    float* sampleValues = Lfluro.getSapectrumSamples();
+                    float energyCount = 0;
+                    for (int i = 0; i < nSamples; i++)
+                    {
+                        energyCount += sampleValues[i];
+                        sampleValues[i] = 0;
+                    }
+
+                    // Zero Spectrum
+                    Lfluro.zeroSpectrum();
+
+                    // Shift it to the selected wavelength region
+
+                    sampleValues[9] = energyCount/3;
+                    sampleValues[10] = energyCount/3;
+                    sampleValues[11] = energyCount/3;
+
+                    Lfluro.setSpectrumValues(sampleValues);
+                    Lv += Lfluro;
+
+                    // Conservation of enegry
+                    Lv /= 2;
+
+                    free(sampleValues);
+                }
             }
         }
+
         ++sampOffset;
     }
     *T = Tr;
+
+//    float* sampleValues = Lv.getSapectrumSamples();
+
+//    // Get all the energy of the spectrum
+//    // and add it to the green components only
+//    float energyCount = 0;
+//    for (int i = 0; i < nSamples; i++)
+//        energyCount += sampleValues[i];
+
+//    // Zero Spectrum
+//    Lv.zeroSpectrum();
+
+
+//    // Green wavelengths : 530 [13] - 600 [20]
+//    const int lambda_start = 18;
+//    const int lambda_end = 19;
+//    for (int i = lambda_start; i < lambda_end; i++)
+//    {
+//        int N = lambda_end - lambda_start;
+//        sampleValues[i] = energyCount / N;
+//    }
+
+//    Lv.setSpectrumValues(sampleValues);
+
+//    free(sampleValues);
+
     return Lv * step;
 }
 
 
-SingleScatteringIntegrator *CreateSingleScatteringIntegrator(const ParamSet &params) {
+
+
+Abdellah *CreateAbdellahIntegrator(const ParamSet &params) {
     float stepSize  = params.FindOneFloat("stepsize", 1.f);
-    return new SingleScatteringIntegrator(stepSize);
+    return new Abdellah(stepSize);
 }
 
 

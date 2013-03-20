@@ -54,6 +54,11 @@ public:
         Intersection *isect = NULL, Spectrum *T = NULL) const;
     Spectrum Transmittance(const Scene *scene, const RayDifferential &ray,
         const Sample *sample, RNG &rng, MemoryArena &arena) const;
+
+
+
+    int sampleTurn;
+
 private:
     // SamplerRenderer Private Data
     bool visualizeObjectIds;

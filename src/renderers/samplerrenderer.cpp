@@ -58,6 +58,8 @@ static uint32_t hash(char *key, uint32_t len)
 
 // SamplerRendererTask Definitions
 void SamplerRendererTask::Run() {
+
+    int sampleNum = 0;
     PBRT_STARTED_RENDERTASK(taskNum);
     // Get sub-_Sampler_ for _SamplerRendererTask_
     Sampler *sampler = mainSampler->GetSubSampler(taskNum, taskCount);
@@ -259,6 +261,15 @@ Spectrum SamplerRenderer::Li(const Scene *scene,
     }
     Spectrum Lvi = volumeIntegrator->Li(scene, this, ray, sample, rng,
                                         T, arena);
+
+
+#ifdef WRITE_SPECTRUM
+    FILE* fileSpectrum;
+    fileSpectrum = fopen("fileSpectrum.txt", "w");
+    Lvi.Write(fileSpectrum);
+    fclose(fileSpectrum);
+#endif
+
     return *T * Li + Lvi;
 }
 

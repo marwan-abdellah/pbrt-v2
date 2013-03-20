@@ -264,12 +264,23 @@ public:
         return true;
     }
 
-    float* getC(void){
+    float* getSapectrumSamples(){
         float* cSamples = (float*) malloc(nSamples * sizeof(float));
         for (int i = 0; i < nSamples; i++)
-            cSamples[i] = c[i];
+            cSamples[i] = this->c[i];
 
         return cSamples;
+    }
+
+    void setSpectrumValues(float* cSamples){
+        for (int i = 0; i < nSamples; i++)
+            this->c[i] = cSamples[i] ;
+    }
+
+    void zeroSpectrum()
+    {
+        for (int i = 0; i < nSamples; i++)
+            this->c[i] = 0.f;
     }
 
 protected:
