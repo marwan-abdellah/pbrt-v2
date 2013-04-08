@@ -36,6 +36,7 @@
 #include "scene.h"
 #include "paramset.h"
 #include "montecarlo.h"
+#include "volumes/volumegrid.h"
 
 // Abdellah Method Definitions
 // Get the samples along the ray
@@ -63,44 +64,6 @@ Spectrum Abdellah::Transmittance(const Scene *scene,
     return Exp(-tau);
 }
 
-
-
-
-
-
-void Abdellah::Test(){
-
-
-    float lambdaInitial = 400;
-    float lambdaFinal = 700;
-    int lambdaSamples = 30;
-    float lambdaStep = (lambdaFinal - lambdaInitial) / (lambdaSamples);
-
-    int lambdaCtr;
-
-
-
-    for (lambdaCtr = 0; lambdaCtr < lambdaSamples; lambdaCtr++)
-    {
-
-        // Power value
-        float powerValue;
-
-
-
-
-    }
-
-
-}
-
-
-
-
-
-
-
-
 // RADIANCE CALCULATION
 Spectrum Abdellah::Li(const Scene *scene,
                       const Renderer *renderer,
@@ -111,6 +74,7 @@ Spectrum Abdellah::Li(const Scene *scene,
 
     // This is our volume region to be integrated in the scene...
     VolumeRegion *vr = scene->volumeRegion;
+    // DensityRegion *vr = dynamic_cast<DensityRegion*> (scene->volumeRegion);
 
 
     // Intersection points between the ray and the volume
@@ -144,24 +108,26 @@ Spectrum Abdellah::Li(const Scene *scene,
     LDShuffleScrambled2D(1, nSamples, lightPos, rng);
     uint32_t sampOffset = 0;
 
-
-
     // Tracing ray
     for (int i = 0; i < nSamples; ++i, t0 += step) {
 
         // Advance to sample at _t0_ and update _T_
         pPrev = p;
 
+        // The new point "p" which is refered by "p'" in the equation.
         p = ray(t0);
 
-        // Calculate tau along the ray s
+        // This is the ray that will advance in the volume
         Ray tauRay(pPrev, p - pPrev, 0.f, 1.f, ray.time, ray.depth);
 
         // Calculate tau in the volume
+        // Step size is reduced by half ???
+        // May be for increasing quality
+        // Offset is randomized ???
+        // The first sample is placed randomly in the first segment "p.881"
         Spectrum stepTau = vr->tau(tauRay,
                                    .5f * stepSize, rng.RandomFloat());
 
-        // Calculate the trnasmittance
         Tr *= Exp(-stepTau);
 
         // Possibly terminate ray marching if transmittance is small
@@ -175,8 +141,18 @@ Spectrum Abdellah::Li(const Scene *scene,
         }
 
         // Compute single-scattering source term at _p_
-        // This is basically due to the emissio as calculated before
+        // This is basically due to the emission as calculated before
+        // First term in the transfer equation (16.4)
         Lv += Tr * vr->Lve(p, w, ray.time);
+
+        // Calculate the second part of equation in section 16.4
+        // The direct contribution from the light source RADIANCE
+        // Get sigma scatering (ss)
+        // Make some checkes for reducing the rendering time
+        // * Check if the volume is not scattering (black body which only absorbs)
+        // * Check if the scene doesn't have any light source (DARK scene)
+        // *** Consider only a single light source in the scene ***
+        // * Check if light is occluded or not
 
         // Get the scattering coeffecient sigma_s
         // Defined in the scene descriptor
@@ -190,6 +166,12 @@ Spectrum Abdellah::Li(const Scene *scene,
             int nLights = scene->lights.size();
 
             // ???
+            // Light index
+            // Getting a single light from the light sources in the scene ???
+            // Selecting a light to sample
+            // A single light is selected and sampled at each point along the ray
+            // The light contribution is scaled by the number of lights
+            // Sample one light strategy
             int ln = min(Floor2Int(lightNum[sampOffset] * nLights),
                          nLights-1);
 
@@ -201,49 +183,69 @@ Spectrum Abdellah::Li(const Scene *scene,
 
             // Checking the obstructions between the light and the point
             VisibilityTester vis;
+
+            // Observer direction
             Vector wo;
 
-            // light sample
+            // Light sample
             LightSample ls(lightComp[sampOffset], lightPos[2*sampOffset],
                            lightPos[2*sampOffset+1]);
 
-            // Getting the contribution of the light
+            // The second term of single scattering equation in section 16.4
+            // Taking a light sample on the "selected" light source
+            // Calculate the radiance at point "p" (should be p')
+            // It returns the distribution of light pdf at (p, wo)
+            // Light only contributes to the radiance if pdf > 0
             Spectrum L = light->Sample_L(p, 0.f, ls, ray.time, &wo, &pdf, &vis);
             
-            // Light has an effet "check"
+            // Check if the spectrum is black
+            // Check if the light has contribution along the ray
+            // Check if the light is unoccluded
+            // If yes, then add that contribution along the ray
             if (!L.IsBlack() && pdf > 0.f && vis.Unoccluded(scene)) {
 
-                // Get the contribution due to the light source for the elsatic scattering
+                // Ld at the point along the ray "p'"
                 Spectrum Ld = L * vis.Transmittance(scene, renderer, NULL, rng, arena);
 
+                int ELASTIC_SCATTER = 0;
+                int INELASTIC_SCATTER = 1;
+
                 // Elastic Scattering
-                if(1)
+                if(ELASTIC_SCATTER)
                 {
+                    // The multiplication with the number of light is a bit confusing
+                    // The division by the pdf is a bit confusing
+                    // This according to the "sample one light strategy"
                     Lv += Tr * ss * vr->p(p, w, -wo, ray.time) * Ld * float(nLights) /
                             pdf;
                 }
 
-
-
                 // Inelastic scattering
-                if (1)
+                // Spectral shift
+                if (INELASTIC_SCATTER)
                 {
                     // Get the contribution from the in elastic scattering and use the
                     // isotropic phase function
 
-                    // Radiance due to the light
+                    // Consider the radiance due to the light "Ld"
                     // In that part, I should account for the spectral shift with some spectral
                     // shifting function and also multiply with the quantum yield
+                    // Qunatum yield is obtained from Wikipedia for GFP
                     float quantumYield = 0.79;
+
+                    // Flu. radiance
                     Spectrum Lfluro(0.);
 
+                    // Radiance due to fluorescence along the ray at point "p'"
+                    // Tr is less than 1
+                    // Tr is a function of distance
                     Lfluro = quantumYield * Tr * ss * (1 / (4.f * M_PI)) * Ld * float(nLights) /
                             pdf;
 
                     // Do the spectral shift
                     float* sampleValues = Lfluro.getSapectrumSamples();
                     float energyCount = 0;
-                    for (int i = 0; i < nSamples; i++)
+                    for (int i = 0; i < nSpectralSamples; i++)
                     {
                         energyCount += sampleValues[i];
                         sampleValues[i] = 0;
@@ -253,16 +255,15 @@ Spectrum Abdellah::Li(const Scene *scene,
                     Lfluro.zeroSpectrum();
 
                     // Shift it to the selected wavelength region
-
-                    sampleValues[9] = energyCount/3;
-                    sampleValues[10] = energyCount/3;
-                    sampleValues[11] = energyCount/3;
+                    // 11 corresponds to 510 nm
+                    sampleValues[11] = energyCount/1;
 
                     Lfluro.setSpectrumValues(sampleValues);
                     Lv += Lfluro;
 
-                    // Conservation of enegry
-                    Lv /= 2;
+                    // Conservation of enegry is needed when we account for both cases
+                    if (ELASTIC_SCATTER)
+                        Lv /= 2;
 
                     free(sampleValues);
                 }
@@ -272,31 +273,6 @@ Spectrum Abdellah::Li(const Scene *scene,
         ++sampOffset;
     }
     *T = Tr;
-
-//    float* sampleValues = Lv.getSapectrumSamples();
-
-//    // Get all the energy of the spectrum
-//    // and add it to the green components only
-//    float energyCount = 0;
-//    for (int i = 0; i < nSamples; i++)
-//        energyCount += sampleValues[i];
-
-//    // Zero Spectrum
-//    Lv.zeroSpectrum();
-
-
-//    // Green wavelengths : 530 [13] - 600 [20]
-//    const int lambda_start = 18;
-//    const int lambda_end = 19;
-//    for (int i = lambda_start; i < lambda_end; i++)
-//    {
-//        int N = lambda_end - lambda_start;
-//        sampleValues[i] = energyCount / N;
-//    }
-
-//    Lv.setSpectrumValues(sampleValues);
-
-//    free(sampleValues);
 
     return Lv * step;
 }

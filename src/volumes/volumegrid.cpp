@@ -59,6 +59,7 @@ float VolumeGridDensity::Density(const Point &Pobj) const {
 
 VolumeGridDensity *CreateGridVolumeRegion(const Transform &volume2world,
         const ParamSet &params) {
+
     // Initialize common volume region parameters
     Spectrum sigma_a = params.FindOneSpectrum("sigma_a", 0.);
     Spectrum sigma_s = params.FindOneSpectrum("sigma_s", 0.);

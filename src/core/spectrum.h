@@ -265,8 +265,8 @@ public:
     }
 
     float* getSapectrumSamples(){
-        float* cSamples = (float*) malloc(nSamples * sizeof(float));
-        for (int i = 0; i < nSamples; i++)
+        float* cSamples = (float*) malloc(nSpectralSamples * sizeof(float));
+        for (int i = 0; i < nSpectralSamples; i++)
             cSamples[i] = this->c[i];
 
         return cSamples;

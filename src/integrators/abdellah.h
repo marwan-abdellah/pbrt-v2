@@ -58,7 +58,6 @@ public:
 
     void Test();
 private:
-    // Abdellah Private Data
 
     // Step size in the voume for the integrator
     float stepSize;

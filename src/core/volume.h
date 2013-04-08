@@ -67,6 +67,7 @@ public:
     virtual Spectrum sigma_t(const Point &p, const Vector &wo, float time) const;
     virtual Spectrum tau(const Ray &ray, float step = 1.f,
                          float offset = 0.5) const = 0;
+
 };
 
 
@@ -94,6 +95,7 @@ public:
         return PhaseHG(w, wp, g);
     }
     Spectrum tau(const Ray &r, float stepSize, float offset) const;
+
 protected:
     // DensityRegion Protected Data
     Spectrum sig_a, sig_s, le;
