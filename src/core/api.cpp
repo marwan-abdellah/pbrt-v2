@@ -102,6 +102,7 @@
 #include "samplers/random.h"
 #include "samplers/stratified.h"
 #include "shapes/cone.h"
+#include "shapes/rectangle.h"
 #include "shapes/cylinder.h"
 #include "shapes/disk.h"
 #include "shapes/heightfield.h"
@@ -352,6 +353,12 @@ Reference<Shape> MakeShape(const string &name,
     else if (name == "nurbs")
         s = CreateNURBSShape(object2world, world2object, reverseOrientation,
                              paramSet);
+    else if (name == "rectangle")
+    {
+        s = CreateRectangleShape(object2world, world2object, reverseOrientation,
+                            paramSet);
+        printf("rectangle has been created .... \n");
+    }
     else
         Warning("Shape \"%s\" unknown.", name.c_str());
     paramSet.ReportUnused();

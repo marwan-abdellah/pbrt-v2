@@ -34,6 +34,11 @@
 #include "stdafx.h"
 #include "volumes/volumegrid.h"
 #include "paramset.h"
+#include <iostream>
+#include <fstream>
+#include <stdio.h>
+
+using namespace std;
 
 // VolumeGridDensity Method Definitions
 float VolumeGridDensity::Density(const Point &Pobj) const {
@@ -57,6 +62,82 @@ float VolumeGridDensity::Density(const Point &Pobj) const {
 }
 
 
+void LoadHeader(char *prefix,
+                int &volumeWidth, int &volumeHeight, int &volumeDepth)
+{
+    char hdrFile[300];
+    std::ifstream inputFileStream;
+
+    // Adding the ".hdr" prefix to the dataset path
+    sprintf(hdrFile, "%s.hdr", prefix);
+
+    // Open the eader hdrFile to read the dataset dimensions
+    inputFileStream.open(hdrFile, std::ios::in);
+
+    // Checking the openning of the file
+    if (inputFileStream.fail())
+    {
+        printf("Could not open the HDR file :%s", hdrFile);
+        exit(0);
+    }
+
+    // Reading the dimensions
+    inputFileStream >> volumeWidth;
+    inputFileStream >> volumeHeight;
+    inputFileStream >> volumeDepth;
+
+    // Closing the ".hdr" file
+    inputFileStream.close();
+}
+
+float* LoadVolume(char* prefix)
+{
+    char imgFile[100];
+    ifstream inputFileStream;
+    int iWidth;
+    int iHeight;
+    int iDepth;
+
+    // Reading the header file
+    LoadHeader(prefix, iWidth, iHeight, iDepth);
+
+    // printf("Volume size of %d x %d x %d \n", iWidth, iHeight, iDepth);
+
+    // Adding the ".img" prefix to the dataset path
+    sprintf(imgFile, "%s.img", prefix);
+
+    // Reading the volume image (luminance values)
+    inputFileStream.open(imgFile, ios::in);
+    if (inputFileStream.fail())
+    {
+        printf("Could not open %s \n", imgFile);
+        return NULL;
+    }
+
+    // Allocating the luminance image
+    char* dataChar = (char*) malloc (sizeof(char) * iWidth * iHeight * iDepth);
+    float* data = (float*) malloc (sizeof(float) * iWidth * iHeight * iDepth);
+
+    // Read the image byte by byte
+    const int numVoxels = iWidth * iHeight * iDepth;
+    inputFileStream.read(((char *)dataChar), numVoxels);
+
+    // Closing the input volume stream
+    inputFileStream.close();
+
+    for (int i = 0; i < numVoxels; i++)
+    {
+        if (dataChar[i] > 100)
+            data[i] = (float) 0;
+        else
+            data[i] = (float) dataChar[i];
+    }
+
+    free (dataChar);
+
+    return data;
+}
+
 VolumeGridDensity *CreateGridVolumeRegion(const Transform &volume2world,
         const ParamSet &params) {
 
@@ -67,20 +148,30 @@ VolumeGridDensity *CreateGridVolumeRegion(const Transform &volume2world,
     Spectrum Le = params.FindOneSpectrum("Le", 0.);
     Point p0 = params.FindOnePoint("p0", Point(0,0,0));
     Point p1 = params.FindOnePoint("p1", Point(1,1,1));
-    int nitems;
+
+    int nx = params.FindOneInt("nx", 1);
+    int ny = params.FindOneInt("ny", 1);
+    int nz = params.FindOneInt("nz", 1);
+
+    printf("NX=%d, NY=%d, NZ=%d \n", nx, ny, nz);
+
+    int nitems = 10;
     const float *data = params.FindFloat("density", &nitems);
     if (!data) {
         Error("No \"density\" values provided for volume grid?");
         return NULL;
     }
-    int nx = params.FindOneInt("nx", 1);
-    int ny = params.FindOneInt("ny", 1);
-    int nz = params.FindOneInt("nz", 1);
+
     if (nitems != nx*ny*nz) {
         Error("VolumeGridDensity has %d density values but nx*ny*nz = %d",
             nitems, nx*ny*nz);
         return NULL;
     }
+
+    // IF LOADING FROM A RAW FILE
+    // char path[120] = "/PBR/Software/Scenes/RealStack/G_Volume/G_Volume";
+    // const float* data = LoadVolume(path);
+
     return new VolumeGridDensity(sigma_a, sigma_s, g, Le, BBox(p0, p1),
         volume2world, nx, ny, nz, data);
 }

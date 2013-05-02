@@ -46,14 +46,29 @@ SpotLight::SpotLight(const Transform &light2world,
     cosFalloffStart = cosf(Radians(fall));
 }
 
+double absVal(double value)
+{
+    if (value < 0)
+        return value * -1;
+    else
+        return value;
+}
 
 Spectrum SpotLight::Sample_L(const Point &p, float pEpsilon,
-        const LightSample &ls, float time, Vector *wi,
-        float *pdf, VisibilityTester *visibility) const {
+                             const LightSample &ls, float time, Vector *wi,
+                             float *pdf, VisibilityTester *visibility) const {
     *wi = Normalize(lightPos - p);
     *pdf = 1.f;
     visibility->SetSegment(p, pEpsilon, lightPos, 0., time);
-    return Intensity * Falloff(-*wi) / DistanceSquared(lightPos, p);
+
+
+    // Reject the sample if it exceeds the boundaryof the slice
+    // in the Y coordinate
+    const float delta = 0.5;
+    if (absVal(lightPos.y - p.y) < delta)
+        return Intensity * Falloff(-*wi) / DistanceSquared(lightPos, p);
+    else
+        return 0;
 }
 
 
@@ -64,14 +79,14 @@ float SpotLight::Falloff(const Vector &w) const {
     if (costheta > cosFalloffStart)   return 1.;
     // Compute falloff inside spotlight cone
     float delta = (costheta - cosTotalWidth) /
-                  (cosFalloffStart - cosTotalWidth);
+            (cosFalloffStart - cosTotalWidth);
     return delta*delta*delta*delta;
 }
 
 
 Spectrum SpotLight::Power(const Scene *) const {
     return Intensity * 2.f * M_PI *
-           (1.f - .5f * (cosFalloffStart + cosTotalWidth));
+            (1.f - .5f * (cosFalloffStart + cosTotalWidth));
 }
 
 
@@ -87,14 +102,14 @@ SpotLight *CreateSpotLight(const Transform &l2w, const ParamSet &paramSet) {
     Vector du, dv;
     CoordinateSystem(dir, &du, &dv);
     Transform dirToZ =
-        Transform(Matrix4x4( du.x,  du.y,  du.z, 0.,
-                             dv.x,  dv.y,  dv.z, 0.,
-                            dir.x, dir.y, dir.z, 0.,
-                                0,     0,     0, 1.));
+            Transform(Matrix4x4( du.x,  du.y,  du.z, 0.,
+                                 dv.x,  dv.y,  dv.z, 0.,
+                                 dir.x, dir.y, dir.z, 0.,
+                                 0,     0,     0, 1.));
     Transform light2world = l2w *
-        Translate(Vector(from.x, from.y, from.z)) * Inverse(dirToZ);
+            Translate(Vector(from.x, from.y, from.z)) * Inverse(dirToZ);
     return new SpotLight(light2world, I * sc, coneangle,
-        coneangle-conedelta);
+                         coneangle-conedelta);
 }
 
 
@@ -103,13 +118,16 @@ float SpotLight::Pdf(const Point &, const Vector &) const {
 }
 
 
+
+
 Spectrum SpotLight::Sample_L(const Scene *scene, const LightSample &ls,
-        float u1, float u2, float time, Ray *ray, Normal *Ns,
-        float *pdf) const {
+                             float u1, float u2, float time, Ray *ray, Normal *Ns,
+                             float *pdf) const {
     Vector v = UniformSampleCone(ls.uPos[0], ls.uPos[1], cosTotalWidth);
     *ray = Ray(lightPos, LightToWorld(v), 0.f, INFINITY, time);
     *Ns = (Normal)ray->d;
     *pdf = UniformConePdf(cosTotalWidth);
+
     return Intensity * Falloff(ray->d);
 }
 

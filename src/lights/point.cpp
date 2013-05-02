@@ -46,6 +46,13 @@ PointLight::PointLight(const Transform &light2world,
     Intensity = intensity;
 }
 
+double absValue(double value)
+{
+	if (value < 0)
+		return value * -1; 
+	else
+		return value;
+}
 
 Spectrum PointLight::Sample_L(const Point &p, float pEpsilon,
          const LightSample &ls, float time, Vector *wi, float *pdf,
@@ -53,12 +60,30 @@ Spectrum PointLight::Sample_L(const Point &p, float pEpsilon,
     *wi = Normalize(lightPos - p);
     *pdf = 1.f;
     visibility->SetSegment(p, pEpsilon, lightPos, 0., time);
+    
+    /*
+    const float delta = 0.05;  
+    if (absValue(p.x - lightPos.x) < delta && 
+    	absValue(p.y - lightPos.y) < delta && 
+    	absValue(p.z - lightPos.z) < delta)
+    	return (Intensity * 10);
+	else 
+		return 0; 
+    */
+    
     return Intensity / DistanceSquared(lightPos, p);
+
+    // return Intensity / DistanceCubed(lightPos, p);
+    //return Intensity / DistanceExp(lightPos, p);
+    // return Intensity / DistancePow(lightPos, p, 2);
 }
 
 
 Spectrum PointLight::Power(const Scene *) const {
     return 4.f * M_PI * Intensity;
+
+    // Assume that the Power is the just the intensity at that point
+    // return Intensity;
 }
 
 
@@ -83,7 +108,7 @@ Spectrum PointLight::Sample_L(const Scene *scene, const LightSample &ls,
     *ray = Ray(lightPos, UniformSampleSphere(ls.uPos[0], ls.uPos[1]),
                0.f, INFINITY, time);
     *Ns = (Normal)ray->d;
-    *pdf = UniformSpherePdf();
+    *pdf = UniformSpherePdf();  
     return Intensity;
 }
 

@@ -33,41 +33,41 @@
 #pragma once
 #endif
 
-#ifndef PBRT_LIGHTS_DIFFUSE_H
-#define PBRT_LIGHTS_DIFFUSE_H
+#ifndef PBRT_SHAPES_RECTANGLE_H
+#define PBRT_SHAPES_RECTANGLE_H
 
-// lights/diffuse.h*
-#include "pbrt.h"
-#include "light.h"
-#include "primitive.h"
+// shapes/rectangle.h*
+#include "shape.h"
 
-// DiffuseAreaLight Declarations
-class DiffuseAreaLight : public AreaLight {
+// Rectangle Declarations
+class Rectangle : public Shape {
 public:
-    // DiffuseAreaLight Public Methods
-    DiffuseAreaLight(const Transform &light2world,
-        const Spectrum &Le, int ns, const Reference<Shape> &shape);
-    ~DiffuseAreaLight();
+    // Disk Public Methods
+    // ro is a reverse orientation
+    Rectangle(const Transform *o2w, const Transform *w2o, bool ro,
+              float x, float y, float height);
+    BBox ObjectBound() const;
 
-    Spectrum L(const Point &p, const Normal &n, const Vector &w) const {
-        return Dot(n, w) > 0.f ? Lemit : 0.f;
-    }
-    Spectrum Power(const Scene *) const;
-    bool IsDeltaLight() const { return false; }
-    float Pdf(const Point &, const Vector &) const;
-    Spectrum Sample_L(const Point &P, float pEpsilon, const LightSample &ls, float time,
-        Vector *wo, float *pdf, VisibilityTester *visibility) const;
-    Spectrum Sample_L(const Scene *scene, const LightSample &ls, float u1, float u2,
-        float time, Ray *ray, Normal *Ns, float *pdf) const;
-protected:
-    // DiffuseAreaLight Protected Data
-    Spectrum Lemit;
-    ShapeSet *shapeSet;
-    float area;
+    // THIS ONE HAS TO BE CHECKED
+    bool Intersect(const Ray &ray, float *tHit, float *rayEpsilon,
+                   DifferentialGeometry *dg) const;
+
+    // THIS ONE HAS TO BE CHECKED
+    bool IntersectP(const Ray &ray) const;
+
+    // THIS ONE HAS TO BE CHECKED
+    float Area() const;
+
+    // THIS ONE HAS TO BE CHECKED
+    Point Sample(float u1, float u2, Normal *Ns) const;
+
+private:
+    // Disk Private Data
+    float x, y, height;
 };
 
 
-AreaLight *CreateDiffuseAreaLight(const Transform &light2world, const ParamSet &paramSet,
-        const Reference<Shape> &shape);
+Rectangle *CreateRectangleShape(const Transform *o2w, const Transform *w2o,
+        bool reverseOrientation, const ParamSet &params);
 
-#endif // PBRT_LIGHTS_DIFFUSE_H
+#endif // PBRT_SHAPES_RECTANGLE_H

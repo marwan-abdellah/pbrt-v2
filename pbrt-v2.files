@@ -969,3 +969,7 @@ src/core/error.cpp
 src/core/diffgeom.cpp
 src/core/camera.cpp
 src/core/api.cpp
+src/shapes/rectangle.h
+src/shapes/rectangle.cpp
+src/shapes/simpledisk.h
+src/shapes/simpledisk.cpp

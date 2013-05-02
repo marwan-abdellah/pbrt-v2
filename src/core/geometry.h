@@ -114,6 +114,10 @@ public:
         return (&x)[i];
     }
     float LengthSquared() const { return x*x + y*y + z*z; }
+    float LengthCubed() const {return x*x*x + y*y*y + z*z*z;}
+    float LengthExp() const { return exp(x) + exp(y) + exp(z);}
+    float LengthPower(const int power) const
+        { return pow(x, power) + pow(y, power) + pow(z, power);}
     float Length() const { return sqrtf(LengthSquared()); }
     explicit Vector(const Normal &n);
 
@@ -525,6 +529,19 @@ inline float Distance(const Point &p1, const Point &p2) {
 
 inline float DistanceSquared(const Point &p1, const Point &p2) {
     return (p1 - p2).LengthSquared();
+}
+
+
+inline float DistanceCubed(const Point &p1, const Point &p2) {
+    return (p1 - p2).LengthCubed();
+}
+
+inline float DistanceExp(const Point &p1, const Point &p2) {
+    return (p1 - p2).LengthExp();
+}
+
+inline float DistancePow(const Point &p1, const Point &p2, const int power) {
+    return sqrt(sqrt((p1 - p2).LengthPower(power)));
 }
 
 
