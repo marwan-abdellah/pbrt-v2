@@ -1,4 +1,3 @@
-
 /*
     pbrt source code Copyright(c) 1998-2012 Matt Pharr and Greg Humphreys.
 
@@ -33,40 +32,41 @@
 #pragma once
 #endif
 
-#ifndef PBRT_SHAPES_RECTANGLE_H
-#define PBRT_SHAPES_RECTANGLE_H
+#ifndef PBRT_AREAWITHDELTA_H
+#define PBRT_AREAWITHDELTA_H
 
-// shapes/rectangle.h*
-#include "shape.h"
+// lights/diffuse.h*
+#include "pbrt.h"
+#include "light.h"
+#include "primitive.h"
 
-// Rectangle Declarations
-class Rectangle : public Shape {
+// DiffuseAreaLight Declarations
+class AreaWithDelta : public AreaLight {
 public:
-    // Disk Public Methods
-    // ro is a reverse orientation
-    Rectangle(const Transform *o2w, const Transform *w2o, bool ro,
-              float x, float y, float height);
-    BBox ObjectBound() const;
+    // DiffuseAreaLight Public Methods
+    AreaWithDelta(const Transform &light2world,
+        const Spectrum &Le, int ns, const Reference<Shape> &shape);
+    ~AreaWithDelta();
 
-    bool Intersect(const Ray &ray, float *tHit, float *rayEpsilon,
-                   DifferentialGeometry *dg) const;
-
-    bool IntersectP(const Ray &ray) const;
-
-    float Area() const;
-
-    // THIS ONE HAS TO BE CHECKED
-    Point Sample(float u, float v, Normal *Ns) const;
-
-    float Pdf(const Point &p, const Vector &wi) const;
-
-private:
-    // Disk Private Data
-    float x, y, height;
+    Spectrum L(const Point &p, const Normal &n, const Vector &w) const {
+        return Dot(n, w) > 0.f ? Lemit : 0.f;
+    }
+    Spectrum Power(const Scene *) const;
+    bool IsDeltaLight() const { return true ; }
+    float Pdf(const Point &, const Vector &) const;
+    Spectrum Sample_L(const Point &P, float pEpsilon, const LightSample &ls, float time,
+        Vector *wo, float *pdf, VisibilityTester *visibility) const;
+    Spectrum Sample_L(const Scene *scene, const LightSample &ls, float u1, float u2,
+        float time, Ray *ray, Normal *Ns, float *pdf) const;
+protected:
+    // DiffuseAreaLight Protected Data
+    Spectrum Lemit;
+    ShapeSet *shapeSet;
+    float area;
 };
 
 
-Rectangle *CreateRectangleShape(const Transform *o2w, const Transform *w2o,
-        bool reverseOrientation, const ParamSet &params);
+AreaLight *CreateDiffuseAreaLightWithDelta(const Transform &light2world, const ParamSet &paramSet,
+        const Reference<Shape> &shape);
 
-#endif // PBRT_SHAPES_RECTANGLE_H
+#endif // PBRT_AREAWITHDELTA_H

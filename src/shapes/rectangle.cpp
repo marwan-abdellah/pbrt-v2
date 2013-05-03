@@ -299,11 +299,29 @@ float Rectangle::Pdf(const Point &p, const Vector &wi) const
     float pdf;
     Point pObject = (*WorldToObject)(p);
 
-    if (pObject.x < x/2 && pObject.x > -x/2
-            && pObject.y < y/2 && pObject.y > -y/2)
-         pdf = 1;
-    else
+    // TODO: Check with the normal (n.p)
+    if (!(pObject.x < x/2 && pObject.x > -x/2
+            && pObject.y < y/2 && pObject.y > -y/2))
         return 0;
+
+    // N & wi
+
+    Point P0(-x/2, y/2, height);
+    Point P1(x/2, y/2, height);
+    Point P2(-x/2, -y/2, height);
+
+    Point P0_W = (*WorldToObject)(P0);
+    Point P1_W = (*WorldToObject)(P1);
+    Point P2_W = (*WorldToObject)(P2);
+
+
+    Normal n = Normal(Cross(P2_W-P0_W, P1_W-P0_W));
+    Normal Ns = Normalize(n);
+
+    Normal Nwi(wi.x, wi.y, wi.z);
+
+    if (Dot(Ns,  Nwi) < 0.0010)
+        pdf = 1.0;
 
     if (isinf(pdf)) pdf = 0.f;
         return pdf;

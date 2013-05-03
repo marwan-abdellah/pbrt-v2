@@ -71,6 +71,7 @@
 #include "integrators/useprobes.h"
 #include "integrators/whitted.h"
 #include "lights/diffuse.h"
+#include "lights/areawithdelta.h"
 #include "lights/distant.h"
 #include "lights/goniometric.h"
 #include "lights/infinite.h"
@@ -516,6 +517,8 @@ AreaLight *MakeAreaLight(const string &name,
     AreaLight *area = NULL;
     if (name == "area" || name == "diffuse")
         area = CreateDiffuseAreaLight(light2world, paramSet, shape);
+    else if (name == "areadelta")
+        area = CreateDiffuseAreaLightWithDelta(light2world, paramSet, shape);
     else
         Warning("Area light \"%s\" unknown.", name.c_str());
     paramSet.ReportUnused();

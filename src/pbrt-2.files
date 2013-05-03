@@ -631,3 +631,5 @@ README_BUILDING_MSVC2008.txt
 README_BUILDING_MSVC2010.txt
 SConscript
 SConstruct
+lights/areawithdelta.h
+lights/areawithdelta.cpp

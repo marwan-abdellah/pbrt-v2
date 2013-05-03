@@ -53,7 +53,7 @@ public:
         return Dot(n, w) > 0.f ? Lemit : 0.f;
     }
     Spectrum Power(const Scene *) const;
-    bool IsDeltaLight() const { return false; }
+    bool IsDeltaLight() const { return false ; }
     float Pdf(const Point &, const Vector &) const;
     Spectrum Sample_L(const Point &P, float pEpsilon, const LightSample &ls, float time,
         Vector *wo, float *pdf, VisibilityTester *visibility) const;

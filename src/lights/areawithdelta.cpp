@@ -30,19 +30,19 @@
  */
 
 
-// lights/diffuse.cpp*
+// lights/areawithdelta.cpp*
 #include "stdafx.h"
-#include "lights/diffuse.h"
+#include "lights/areawithdelta.h"
 #include "paramset.h"
 #include "montecarlo.h"
 
 // DiffuseAreaLight Method Definitions
-DiffuseAreaLight::~DiffuseAreaLight() {
+AreaWithDelta::~AreaWithDelta() {
     delete shapeSet;
 }
 
 
-DiffuseAreaLight::DiffuseAreaLight(const Transform &light2world,
+AreaWithDelta::AreaWithDelta(const Transform &light2world,
         const Spectrum &le, int ns, const Reference<Shape> &s)
     : AreaLight(light2world, ns) {
     Lemit = le;
@@ -51,22 +51,24 @@ DiffuseAreaLight::DiffuseAreaLight(const Transform &light2world,
 }
 
 
-Spectrum DiffuseAreaLight::Power(const Scene *) const {
+Spectrum AreaWithDelta::Power(const Scene *) const {
     return Lemit * area * M_PI;
 }
 
 
-AreaLight *CreateDiffuseAreaLight(const Transform &light2world, const ParamSet &paramSet,
+AreaLight *CreateDiffuseAreaLightWithDelta(const Transform &light2world, const ParamSet &paramSet,
         const Reference<Shape> &shape) {
+
+    printf("createddddddddddddddddd");
     Spectrum L = paramSet.FindOneSpectrum("L", Spectrum(1.0));
     Spectrum sc = paramSet.FindOneSpectrum("scale", Spectrum(1.0));
     int nSamples = paramSet.FindOneInt("nsamples", 1);
     if (PbrtOptions.quickRender) nSamples = max(1, nSamples / 4);
-    return new DiffuseAreaLight(light2world, L * sc, nSamples, shape);
+    return new AreaWithDelta(light2world, L * sc, nSamples, shape);
 }
 
 
-Spectrum DiffuseAreaLight::Sample_L(const Point &p, float pEpsilon,
+Spectrum AreaWithDelta::Sample_L(const Point &p, float pEpsilon,
         const LightSample &ls, float time, Vector *wi, float *pdf,
         VisibilityTester *visibility) const {
     PBRT_AREA_LIGHT_STARTED_SAMPLE();
@@ -97,12 +99,12 @@ Spectrum DiffuseAreaLight::Sample_L(const Point &p, float pEpsilon,
 }
 
 
-float DiffuseAreaLight::Pdf(const Point &p, const Vector &wi) const {
+float AreaWithDelta::Pdf(const Point &p, const Vector &wi) const {
     return shapeSet->Pdf(p, wi);
 }
 
 
-Spectrum DiffuseAreaLight::Sample_L(const Scene *scene,
+Spectrum AreaWithDelta::Sample_L(const Scene *scene,
         const LightSample &ls, float u1, float u2, float time,
         Ray *ray, Normal *Ns, float *pdf) const {
     PBRT_AREA_LIGHT_STARTED_SAMPLE();
