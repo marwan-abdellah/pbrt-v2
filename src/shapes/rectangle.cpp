@@ -35,6 +35,10 @@
 #include "shapes/rectangle.h"
 #include "paramset.h"
 #include "montecarlo.h"
+//#include "3rdparty/ilmbase-1.0.2/"
+
+#include "3rdparty/ilmbase-1.0.2/ImathMatrix.h"
+#include "3rdparty/ilmbase-1.0.2/ImathMatrixAlgo.h"
 
 // Rectangle Method Definitions
 Rectangle::Rectangle(const Transform *o2w, const Transform *w2o, bool ro,
@@ -62,45 +66,164 @@ bool Rectangle::Intersect(const Ray &r, float *tHit, float *rayEpsilon,
                      DifferentialGeometry *dg) const {
 
     // Transform _Ray_ to object space
-    Ray ray;
-    (*WorldToObject)(r, &ray);
+        Ray ray;
+        (*WorldToObject)(r, &ray);
 
-    // Compute plane intersection with the rectangle
-    // RETURN FALSE IF THE RAY IS PARALLEL TO THE PLANE
-    // I.E. THE Z COMPONENT IS ALMOST EQUAL TO ZERO
-    if (fabsf(ray.d.z) < 1e-7)
-        return false;
+        // Compute plane intersection for disk
+        // Checks if the plane is parallel to the ray or not
+        // We can get the direction of the ray
+        // If the Z component of the direction of the ray is zero
+        // then, the ray is parallel to the plane and in such case
+        // there is no intersection point between the ray and the plane.
+        if (fabsf(ray.d.z) < 1e-7)
+            return false;
 
-    // CHECK IF THE Z-COMPONENT OF THE RAY IS EQUAL TO THE HEIGHT
-    float thit = (height - ray.o.z) / ray.d.z;
-    if (thit < ray.mint || thit > ray.maxt)
-        return false;
+        // Now, the direction of the ray is not parallel to the plane
+        // We have to check if the intersection happens or not
+        // We have to compute the parametric t where the ray intersects the plane
+        // We want to find t such that the z-component of the ray intersects the plane
+        // The ray "line" equation is l = l0 + (l1 - l0) * t
+        // l1 - l0 will give us the distance between the two points on the plane
+        // Then t is the ratio and in such case it should be between 0 and 1
+        // Considering that the rectangle completely lies in the z plane
+        /// distance = l1 - l0
+        /// thit = (l - l0) / distance
 
-    // NOW WE WANT TO CALCULATE phit WHERE THE RAY INTERSECTS THE PLANE
-    Point phit = ray(thit);
+        // But since we assume that the plane is located at height
+        // Then, the point l is at height on the plane
+        /// l = height
+        float thit = (height - ray.o.z) / ray.d.z;
 
-    // IF phit IS OUTSIDE THE RECTANGLE THEN RETURN FALSE
-    if (!((phit.x < x/2 && phit.y < y/2) ||
-            (phit.x > -x/2 && phit.y < y/2) ||
-            (phit.x > -x/2 && phit.y > y/2) ||
-            (phit.x < x/2 && phit.y > -y/2)))
-        return false;
+        // Then we check if the thit is between the ratio of 0 and 1 that is mapped
+        // between ray.mint and ray.maxt, if not retrun false
+        if (thit < ray.mint || thit > ray.maxt)
+            return false;
 
-    // The normal is the same over the rectangle
-    Normal dndu(0,0,0), dndv(0,0,0);
+        // Then we see if the point lies inside the disk or not
+        // Substitute the thit in the ray equation to get hit point on the ray
+        Point phit = ray(thit);
 
-    // Initialize _DifferentialGeometry_ from parametric information
-    const Transform &o2w = *ObjectToWorld;
-    // *dg = DifferentialGeometry(o2w(phit), NULL, NULL,
-       //                        o2w(dndu), o2w(dndv), 0, 0, this);
+        // We have to make sure that the interesction lies inside the plane
+        if (!(phit.x < x/2 && phit.x > -x/2 && phit.y < y/2 && phit.y > -y/2))
+            return false;
 
-    // Update _tHit_ for quadric intersection
-    *tHit = thit;
+        // Assuming that the plane is formed from the following 4 points
+        // P0, P1, P2, P3
+        //
+        // p0 *---------------* p1
+        //    |               |
+        //    |               |
+        //    |               |
+        //    |       O       |
+        //    |               |
+        //    |               |
+        //    |               |
+        // p2 *---------------* p3  -> X
+        //
+        // P0 @ (-x/2, y/2)
+        // P1 @ (x/2, y/2)
+        // P2 @ (-x/2, -y/2)
+        // P3 @ (x/2, -y/2)
+        Point P0(-x/2, y/2, height), P1(x/2, y/2, height);
+        Point P2(-x/2, -y/2, height), P3(x/2, -y/2, height);
 
-    // Compute _rayEpsilon_ for quadric intersection
-    *rayEpsilon = 5e-4f * *tHit;
+        /// Now, we have to find the parametric form of the plane in terms of (u,v)
+        /// Plane equation can be formed by at least 3 points P0, P1, P2
+        /// P0 -> P1 (vector 1)
+        /// P0 -> p2 (vector 2)
+        /// An arbitrary point on the plane p is found in the following parametric form
+        /// P = P0 + (P1 - P0) u + (P2 - P0) v
+        /// Now we need to express two explicit equations of u and v
+        /// So, we have to construct the system of equation that solves for u and v
+        ///
+        /// Since we have found the intersection point between the plane and the line
+        /// we have to use it to formalize the system of equations that will be used
+        /// to find the parametric form of the plane
+        /// Plane equation is : P = P0 + (P1 - P0) u + (P2 - P0) v
+        /// Ray equation is : l = l0 + (l1 - l0) * thit
+        /// But l = P, then
+        /// l0 + (l1 - l0) * thit = P0 + (P1 - P0) * u + (P2 - P0) * v
+        /// l0 - P0 = (l0 - l1) * thit +  (P1 - P0) * u + (P2 - P0) * v
+        /// MAPPING : l0 = ray.o
+        /// [l0.x - P0.x] = [l0.x - l1.x P1.x - P0.x P2.x - P0.x] [t]
+        /// [l0.y - P0.y] = [l0.y - l1.y P1.y - P0.y P2.y - P0.y] [u]
+        /// [l0.z - P0.z] = [l0.z - l1.z P1.z - P0.z P2.z - P0.z] [v]
+        ///
+        /// Then, we should find the inverse of the matrix in order to
+        /// solve for u,v and t for check
 
-    return true;
+        // System AX = B
+        float a11 = ray.o.x - 0;
+        float a12 = P1.x - P0.x;
+        float a13 = P2.x - P0.x;
+        float a21 = ray.o.y - 0;
+        float a22 = P1.y - P0.y;
+        float a23 = P2.y - P0.y;
+        float a31 = ray.o.y - height;
+        float a32 = P1.z - P0.z;
+        float a33 = P2.z - P0.z;
+
+        float b1 = -7;
+        float b2 = -2;
+        float b3 = 14;
+
+        float x1 = 0;
+        float x2 = 0;
+        float x3 = 0;
+
+        Imath::M33f A(a11,a12,a13,a21,a22,a23,a31,a32,a33), AInverted;
+        Imath::V3f X(x1, x2, x3);
+        Imath::V3f B(b1,b2, b3);
+
+        // This operation has been checked and working for getting
+        // the correct inverse of the matrix A
+        AInverted = A.invert(false);
+
+        x1 =  AInverted[0][0] * B[0] +
+                AInverted[0][1] * B[1] +
+                AInverted[0][2] * B[2];
+
+        x2 =  AInverted[1][0] * B[0] +
+                AInverted[1][1] * B[1] +
+                AInverted[1][2] * B[2];
+
+        x3 =  AInverted[2][0] * B[0] +
+                AInverted[2][1] * B[1] +
+                AInverted[2][2] * B[2];
+
+        /// Then we have u = something, and v = something
+        ///
+        /// Then we come for the derivatives, so we have to find the derivatives
+        /// from the parametric forms defined above for the plane equations
+        /// dpdu = (P1 - P0)
+        /// dpdv = (P2 - P0)
+        ///
+        /// For the normal we have the always fixed direction in y
+        /// So the derivative for the normal is zero
+        /// dndu = (0, 0, 0) dndv = (0, 0, 0)
+        ///
+        /// Then we can construct the DifferentilGeometry and go ahead
+
+        // Find parametric representation of disk hit
+        float u = x2;
+        float v = x3;
+
+        Vector dpdu(P1.x - P0.x, P1.y - P0.y, P1.z - P0.z);
+        Vector dpdv(P2.x - P0.x, P2.y - P0.y, P2.z - P0.z);
+        Normal dndu(0,0,0), dndv(0,0,0);
+
+
+        // Initialize _DifferentialGeometry_ from parametric information
+        const Transform &o2w = *ObjectToWorld;
+        *dg = DifferentialGeometry(o2w(phit), o2w(dpdu), o2w(dpdv),
+                                   o2w(dndu), o2w(dndv), u, v, this);
+
+        // Update _tHit_ for quadric intersection
+        *tHit = thit;
+
+        // Compute _rayEpsilon_ for quadric intersection
+        *rayEpsilon = 5e-4f * *tHit;
+        return true;
 }
 
 
@@ -145,21 +268,43 @@ Rectangle *CreateRectangleShape(const Transform *o2w, const Transform *w2o,
 }
 
 
-Point Rectangle::Sample(float u1, float u2, Normal *Ns) const {
+Point Rectangle::Sample(float u, float v, Normal *Ns) const {
 
-    // SAMPLING THE RECTANGLE TO RETURN A POINT ON IT
-    Point p;
+    // u and v are rendom samples on the surface of the light source
+    Point P0(-x/2, y/2, height), P1(x/2, y/2, height);
+    Point P2(-x/2, -y/2, height), P3(x/2, -y/2, height);
 
-    ConcentricSampleDisk(u1, u2, &p.x, &p.y);
+    Point p = P0 + (P1 - P0) * u + (P2 - P0) * v;
 
-    p.x *= x/2;
-    p.y *= y/2;
-    p.z = height;
+    Normal n = Normal(Cross(P2-P0, P1-P0));
+    *Ns = Normalize(n);
+
 
     // NORMAL ON THE PLANE
-    *Ns = Normalize((*ObjectToWorld)(Normal(0,0,1)));
+    *Ns = Normalize((*ObjectToWorld)(n));
     if (ReverseOrientation) *Ns *= -1.f;
     return (*ObjectToWorld)(p);
 }
 
 
+float Rectangle::Pdf(const Point &p, const Vector &wi) const
+{
+    // Intersect sample ray with area light geometry
+    DifferentialGeometry dgLight;
+    Ray ray(p, wi, 1e-3f);
+    ray.depth = -1; // temporary hack to ignore alpha mask
+    float thit, rayEpsilon;
+    if (!Intersect(ray, &thit, &rayEpsilon, &dgLight)) return 0.;
+
+    float pdf;
+    Point pObject = (*WorldToObject)(p);
+
+    if (pObject.x < x/2 && pObject.x > -x/2
+            && pObject.y < y/2 && pObject.y > -y/2)
+         pdf = 1;
+    else
+        return 0;
+
+    if (isinf(pdf)) pdf = 0.f;
+        return pdf;
+}

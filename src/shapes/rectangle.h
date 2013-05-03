@@ -48,18 +48,18 @@ public:
               float x, float y, float height);
     BBox ObjectBound() const;
 
-    // THIS ONE HAS TO BE CHECKED
     bool Intersect(const Ray &ray, float *tHit, float *rayEpsilon,
                    DifferentialGeometry *dg) const;
 
-    // THIS ONE HAS TO BE CHECKED
     bool IntersectP(const Ray &ray) const;
 
-    // THIS ONE HAS TO BE CHECKED
     float Area() const;
 
     // THIS ONE HAS TO BE CHECKED
-    Point Sample(float u1, float u2, Normal *Ns) const;
+    Point Sample(float u, float v, Normal *Ns) const;
+
+
+    float Pdf(const Point &p, const Vector &wi) const;
 
 private:
     // Disk Private Data
