@@ -270,7 +270,7 @@ Rectangle *CreateRectangleShape(const Transform *o2w, const Transform *w2o,
 
 Point Rectangle::Sample(float u, float v, Normal *Ns) const {
 
-    // u and v are rendom samples on the surface of the light source
+    // u and v are random samples on the surface of the light source
     Point P0(-x/2, y/2, height), P1(x/2, y/2, height);
     Point P2(-x/2, -y/2, height), P3(x/2, -y/2, height);
 
@@ -278,7 +278,6 @@ Point Rectangle::Sample(float u, float v, Normal *Ns) const {
 
     Normal n = Normal(Cross(P2-P0, P1-P0));
     *Ns = Normalize(n);
-
 
     // NORMAL ON THE PLANE
     *Ns = Normalize((*ObjectToWorld)(n));
@@ -305,7 +304,6 @@ float Rectangle::Pdf(const Point &p, const Vector &wi) const
         return 0;
 
     // N & wi
-
     Point P0(-x/2, y/2, height);
     Point P1(x/2, y/2, height);
     Point P2(-x/2, -y/2, height);
