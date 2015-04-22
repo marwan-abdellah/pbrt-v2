@@ -84,7 +84,7 @@ LIBOBJS += $(addprefix objs/, $(subst /,_,$(LIB_CXXSRCS:.cpp=.o)))
 
 HEADERS = $(wildcard */*.h)
 
-TOOLS = bin/bsdftest bin/exravg bin/exrdiff
+TOOLS = bin/bsdftest bin/exravg bin/exrdiff bin/obj2pbrt
 ifeq ($(HAVE_LIBTIFF),1)
     TOOLS += bin/exrtotiff
 endif
@@ -101,6 +101,7 @@ dirs:
 $(LIBOBJS): $(HEADERS)
 
 .PHONY: dirs tools 
+.SECONDARY:
 
 objs/libpbrt.a: $(LIBOBJS)
 	@echo "Building the core rendering library (libpbrt.a)"
@@ -182,7 +183,7 @@ bin/%: objs/tools_%.o objs/libpbrt.a
 	@echo "Linking $@"
 	@$(CXX) $(CXXFLAGS) -o $@ $^ $(LIBS)
 
-bin/exrtotiff: objs/exrtotiff.o 
+bin/exrtotiff: objs/tools_exrtotiff.o 
 	@echo "Linking $@"
 	@$(CXX) $(CXXFLAGS) -o $@ $^ $(TIFF_LIBDIR) -ltiff $(LIBS) 
 
